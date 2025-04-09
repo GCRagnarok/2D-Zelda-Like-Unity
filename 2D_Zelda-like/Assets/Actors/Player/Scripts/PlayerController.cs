@@ -1,33 +1,43 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
+    //Editor variables
     public Animator animator;
-    private BoxCollider2D boxCollider;
-    public LayerMask wallLayer;
+    private PlayerCollisions playerCollisions;
+    private PlayerStats playerStats;
 
+    //Movement variables
     private float moveDirectionX;
     private float moveDirectionY;
-    public float moveSpeed = 5.0f;
+    private float lastMoveDirectionX = 0;
+    private float lastMoveDirectionY = -1;
 
-    private float attackTime;
-    public float startAttackTime;
-    public float attackCooldownTime;
-    private float nextAttackTime = 0;
-
-    private bool canMove;
-    private bool multipleInput;
+    public bool canMove;
 
     private string firstInputAxis;
 
+    //Attack variables
+    private float attackTime;
+    private float nextAttackTime = 0;
+
+    private bool isSpinAttacking;
+
+    private Coroutine spinAttackCoroutine;
+
     void Start()
     {
+        // Initialize Components
+        playerCollisions = GetComponent<PlayerCollisions>();
+        playerStats = GetComponent<PlayerStats>();
+
+        // Initialize movement variables
         canMove = true;
-        attackTime = startAttackTime;
-        boxCollider = GetComponent<BoxCollider2D>();
+        attackTime = playerStats.GetStartAttackTime();
     }
 
     // Update is called once per frame
@@ -37,6 +47,7 @@ public class PlayerController : MonoBehaviour
         AttackCooldown();
     }
 
+    //Movement Functions --------------------------------------------------------------------------------------------
     private void HandleMovementInput()
     {
         // Get the input from the player
@@ -50,6 +61,9 @@ public class PlayerController : MonoBehaviour
             moveDirectionY = 0;
             firstInputAxis = "Horizontal";
 
+            lastMoveDirectionX = moveDirectionX;
+            lastMoveDirectionY = moveDirectionY;
+
             animator.SetBool("Horizontal", true);
             animator.SetBool("Vertical", false);
             animator.SetFloat("Direction", horizontalInput);
@@ -60,6 +74,9 @@ public class PlayerController : MonoBehaviour
             firstInputAxis = "Vertical";
             moveDirectionX = 0;
             moveDirectionY = verticalInput > 0 ? 1 : -1;
+
+            lastMoveDirectionX = moveDirectionX;
+            lastMoveDirectionY = moveDirectionY;
 
             animator.SetBool("Vertical", true);
             animator.SetBool("Horizontal", false);
@@ -74,6 +91,8 @@ public class PlayerController : MonoBehaviour
                 moveDirectionX = 0;
                 moveDirectionY = verticalInput > 0 ? 1 : -1;
 
+                lastMoveDirectionY = moveDirectionY;
+
                 animator.SetBool("Vertical", true);
                 animator.SetBool("Horizontal", false);
                 animator.SetFloat("Direction", verticalInput);
@@ -82,6 +101,8 @@ public class PlayerController : MonoBehaviour
             {
                 moveDirectionX = horizontalInput > 0 ? 1 : -1;
                 moveDirectionY = 0;
+
+                lastMoveDirectionX = moveDirectionX;
 
                 animator.SetBool("Horizontal", true);
                 animator.SetBool("Vertical", false);
@@ -102,35 +123,62 @@ public class PlayerController : MonoBehaviour
 
         // Move the player if no collision is detected
         Vector2 moveDirection = new Vector2(moveDirectionX, moveDirectionY);
-        Vector2 newPosition = (Vector2)transform.position + moveDirection * moveSpeed * Time.deltaTime;
+        Vector2 newPosition = (Vector2)transform.position + moveDirection * playerStats.GetMoveSpeed() * Time.deltaTime;
 
-        if (!IsCollidingWithWall(newPosition) && canMove)
+        if (canMove && !playerCollisions.IsColliding(newPosition))
         {
             transform.position = newPosition;
         }
     }
 
-    private bool IsCollidingWithWall(Vector2 newPosition)
+    //Movement getters and setters
+    public string GetDirection()
     {
-        // Perform an overlap box to check for collisions with the wall layer
-        Vector2 direction = newPosition - (Vector2)transform.position;
-        float distance = direction.magnitude;
-        Vector2 boxSize = boxCollider.bounds.size;
-        Vector2 boxCenter = (Vector2)transform.position + direction.normalized * distance;
+        string direction = "";
 
-        Collider2D[] hits = Physics2D.OverlapBoxAll(boxCenter, boxSize, 0f, wallLayer);
-
-        return hits.Length > 0;
+        switch (lastMoveDirectionX, lastMoveDirectionY)
+        {
+            case (1, 0):
+                direction = "Right";
+                break;
+            case (0, 1):
+                direction = "Up";
+                break;
+            case (0, -1):
+                direction = "Down";
+                break;
+            case (-1, 0):
+                direction = "Left";
+                break;
+        }
+        return direction;
     }
 
+    public bool GetCanMove()
+    {
+        return canMove;
+    }
+
+    private void SetCanMoveAnimationEvent(int i)
+    {
+        if (i == 0)
+        {
+            canMove = true;
+        }
+        else
+        {
+            canMove = false;
+        }
+    }
+
+    //Attack Functions ----------------------------------------------------------------------------------------------
     private void AttackCooldown()
     {
         if (Time.time > nextAttackTime)
         {
             if (attackTime <= 0)
             {
-                canMove = true;
-                attackTime = startAttackTime;
+                attackTime = playerStats.GetStartAttackTime();
             }
             else
             {
@@ -144,10 +192,92 @@ public class PlayerController : MonoBehaviour
     {
         if (Input.GetButtonDown("Attack"))
         {
-            canMove = false;
+            // Stop the existing coroutine if it's running
+            if (spinAttackCoroutine != null)
+            {
+                StopCoroutine(spinAttackCoroutine);
+                spinAttackCoroutine = null;
+            }
+
             animator.SetTrigger("Attack");
-            nextAttackTime = Time.time + attackCooldownTime;
+            nextAttackTime = Time.time + playerStats.GetAttackCooldownTime();
+
+            playerCollisions.CheckSwordCollisions();
+
+            // Start the coroutine to check for spin attack and set the reference
+            spinAttackCoroutine = StartCoroutine(CheckForSpinAttack());
         }
     }
+
+    private IEnumerator CheckForSpinAttack()
+    {
+        yield return new WaitForSeconds(0.8f);
+
+        // Check if the attack button is still being held
+        if (Input.GetButton("Attack"))
+        {
+            SpinAttack();
+        }
+
+        spinAttackCoroutine = null;
+    }
+
+    private void SpinAttack()
+    {
+        animator.SetTrigger("SpinAttack");
+    }
+
+    //Attack getters and setters
+    public bool GetIsSpinAttacking()
+    {
+        return isSpinAttacking;
+    }
+
+    private void SetIsSpinAttackingAnimationEvent(int i)
+    {
+        if (i == 0)
+        {
+            isSpinAttacking = false;
+        }
+        else
+        {
+            isSpinAttacking = true;
+        }
+    }
+    /*
+    // Gizmos Functions ---------------------------------------------------------------------------------------------
+    private void OnDrawGizmosSelected()
+    {
+        if (playerCollisions.attackPointUp != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(playerCollisions.attackPointUp.position, playerStats.GetAttackRadius());
+        }
+
+        if (playerCollisions.attackPointDown != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(playerCollisions.attackPointDown.position, playerStats.GetAttackRadius());
+        }
+
+        if (playerCollisions.attackPointLeft != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(playerCollisions.attackPointLeft.position, playerStats.GetAttackRadius());
+        }
+
+        if (playerCollisions.attackPointRight != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(playerCollisions.attackPointRight.position, playerStats.GetAttackRadius());
+        }
+
+        if (playerCollisions.attackPointCenter != null)
+        {
+            Gizmos.color = Color.blue;
+            Gizmos.DrawWireSphere(playerCollisions.attackPointCenter.position, playerStats.GetSpinAttackRadius());
+        }
+    }
+    */
 
 }
