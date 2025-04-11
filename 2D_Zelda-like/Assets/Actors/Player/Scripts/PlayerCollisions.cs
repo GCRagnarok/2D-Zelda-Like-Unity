@@ -56,7 +56,7 @@ public class PlayerCollisions : MonoBehaviour
             switch (playerController.GetDirection())
             {
                 case "Up":
-                    Collider2D[] hitAttackablesUp = Physics2D.OverlapCircleAll(attackPointUp.position, playerStats.GetAttackRadius(), attackableLayer);
+                    Collider2D[] hitAttackablesUp = Physics2D.OverlapBoxAll(attackPointUp.position, playerStats.swordHorizontalHitBox, attackableLayer);
 
                     foreach (Collider2D attackable in hitAttackablesUp)
                     {
@@ -75,7 +75,7 @@ public class PlayerCollisions : MonoBehaviour
                     break;
 
                 case "Down":
-                    Collider2D[] hitAttackablesDown = Physics2D.OverlapCircleAll(attackPointDown.position, playerStats.GetAttackRadius(), attackableLayer);
+                    Collider2D[] hitAttackablesDown = Physics2D.OverlapBoxAll(attackPointDown.position, playerStats.swordHorizontalHitBox, attackableLayer);
 
                     foreach (Collider2D attackable in hitAttackablesDown)
                     {
@@ -94,7 +94,7 @@ public class PlayerCollisions : MonoBehaviour
                     break;
 
                 case "Left":
-                    Collider2D[] hitAttackablesLeft = Physics2D.OverlapCircleAll(attackPointLeft.position, playerStats.GetAttackRadius(), attackableLayer);
+                    Collider2D[] hitAttackablesLeft = Physics2D.OverlapBoxAll(attackPointLeft.position, playerStats.swordVerticalHitBox, attackableLayer);
 
                     foreach (Collider2D attackable in hitAttackablesLeft)
                     {
@@ -114,7 +114,7 @@ public class PlayerCollisions : MonoBehaviour
 
                 case "Right":
 
-                    Collider2D[] hitAttackablesRight = Physics2D.OverlapCircleAll(attackPointRight.position, playerStats.GetAttackRadius(), attackableLayer);
+                    Collider2D[] hitAttackablesRight = Physics2D.OverlapBoxAll(attackPointRight.position, playerStats.swordVerticalHitBox, attackableLayer);
 
                     foreach (Collider2D attackable in hitAttackablesRight)
                     {
@@ -136,7 +136,7 @@ public class PlayerCollisions : MonoBehaviour
         //Spin attack
         else
         {
-            Collider2D[] hitAttackablesCenter = Physics2D.OverlapCircleAll(attackPointCenter.position, playerStats.GetSpinAttackRadius(), attackableLayer);
+            Collider2D[] hitAttackablesCenter = Physics2D.OverlapBoxAll(attackPointCenter.position, playerStats.swordSpinHitBox, attackableLayer);
 
             foreach (Collider2D attackable in hitAttackablesCenter)
             {
@@ -149,7 +149,7 @@ public class PlayerCollisions : MonoBehaviour
 
                 if (attackable.gameObject.layer == LayerMask.NameToLayer("Enemy"))
                 {
-                    attackable.GetComponent<EnemyStats>().TakeDamage(playerStats.GetSpinAttackDamage());
+                    attackable.GetComponent<EnemyStats>().TakeDamage(playerStats.GetAttackDamage());
                 }
             }
         }

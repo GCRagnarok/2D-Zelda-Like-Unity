@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Player_Atttack_Up
+  m_Name: Player_Spin_Atttack_Start_Up
   serializedVersion: 7
   m_Legacy: 0
   m_Compressed: 0
@@ -21,21 +21,23 @@ AnimationClip:
   - serializedVersion: 2
     curve:
     - time: 0
-      value: {fileID: -2008721126, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
+      value: {fileID: -1818976353, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
     - time: 0.0625
-      value: {fileID: -1995777177, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
+      value: {fileID: -1390356693, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
     - time: 0.125
-      value: {fileID: 1414742419, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
+      value: {fileID: -1243698462, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
     - time: 0.1875
-      value: {fileID: 1052089275, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
+      value: {fileID: 1594269993, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
     - time: 0.25
-      value: {fileID: 2001044590, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
+      value: {fileID: -1293530112, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
     - time: 0.3125
-      value: {fileID: 1415858692, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
+      value: {fileID: 15200278, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
     - time: 0.375
-      value: {fileID: 969509420, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
+      value: {fileID: 697186408, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
     - time: 0.4375
-      value: {fileID: -1226038233, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
+      value: {fileID: 1009854605, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
+    - time: 0.5
+      value: {fileID: -1374247805, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
     attribute: m_Sprite
     path: 
     classID: 212
@@ -58,20 +60,21 @@ AnimationClip:
       isIntCurve: 0
       isSerializeReferenceCurve: 0
     pptrCurveMapping:
-    - {fileID: -2008721126, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
-    - {fileID: -1995777177, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
-    - {fileID: 1414742419, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
-    - {fileID: 1052089275, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
-    - {fileID: 2001044590, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
-    - {fileID: 1415858692, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
-    - {fileID: 969509420, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
-    - {fileID: -1226038233, guid: bd6950ce0b05cec4e8f14ebd691c81ef, type: 3}
+    - {fileID: -1818976353, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
+    - {fileID: -1390356693, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
+    - {fileID: -1243698462, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
+    - {fileID: 1594269993, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
+    - {fileID: -1293530112, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
+    - {fileID: 15200278, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
+    - {fileID: 697186408, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
+    - {fileID: 1009854605, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
+    - {fileID: -1374247805, guid: 67703a226d99cea42a780c8d6892a92d, type: 3}
   m_AnimationClipSettings:
     serializedVersion: 2
     m_AdditiveReferencePoseClip: {fileID: 0}
     m_AdditiveReferencePoseTime: 0
     m_StartTime: 0
-    m_StopTime: 0.5
+    m_StopTime: 0.5625
     m_OrientationOffsetY: 0
     m_Level: 0
     m_CycleOffset: 0
@@ -92,23 +95,30 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 0
+    functionName: SetMoveSpeed
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 2.5
+    intParameter: 0
+    messageOptions: 0
+  - time: 0
     functionName: SetCanMoveAnimationEvent
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
-  - time: 0.4375
-    functionName: SetCanMoveAnimationEvent
+  - time: 0
+    functionName: SetIsAttackingAnimationEvent
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 1
     messageOptions: 0
-  - time: 0.4375
-    functionName: SetIsAttackingAnimationEvent
+  - time: 0.5
+    functionName: SetCanMoveAnimationEvent
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
-    intParameter: 0
+    intParameter: 1
     messageOptions: 0

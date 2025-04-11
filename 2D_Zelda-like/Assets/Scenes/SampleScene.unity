@@ -3137,12 +3137,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 5
-  startAttackTime: 0.1
+  dashSpeed: 10
+  dashDuration: 0.2
+  dashCooldownTime: 0.4
   attackCooldownTime: 0.4
-  attackRadius: 0.6
-  spinAttackRadius: 1.2
   attackDamage: 10
-  spinAttackDamage: 30
+  swordHorizontalHitBox: {x: 0.3, y: 0.5}
+  swordVerticalHitBox: {x: 0.5, y: 0.3}
+  swordSpinHitBox: {x: 2, y: 2}
   maxHealth: 100
   currentHealth: 0
 --- !u!4 &1840620895 stripped
@@ -3502,6 +3504,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
+    - target: {fileID: 5773425553066832651, guid: b9a630d57565b4141b9b4e1e1a233169, type: 3}
+      propertyPath: m_TagString
+      value: Untagged
+      objectReference: {fileID: 0}
     - target: {fileID: 5931000234392534376, guid: b9a630d57565b4141b9b4e1e1a233169, type: 3}
       propertyPath: m_SortingOrder
       value: 10
@@ -3542,6 +3548,14 @@ PrefabInstance:
       propertyPath: attackPointCenter
       value: 
       objectReference: {fileID: 17895253}
+    - target: {fileID: 8863744090313146282, guid: b9a630d57565b4141b9b4e1e1a233169, type: 3}
+      propertyPath: m_TagString
+      value: Untagged
+      objectReference: {fileID: 0}
+    - target: {fileID: 8882261054699303496, guid: b9a630d57565b4141b9b4e1e1a233169, type: 3}
+      propertyPath: m_IsTrigger
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

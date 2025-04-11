@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
@@ -16,18 +17,27 @@ public class PlayerController : MonoBehaviour
     private float moveDirectionY;
     private float lastMoveDirectionX = 0;
     private float lastMoveDirectionY = -1;
+    private float dashDurationTime;
+    private float nextDashTime;
 
-    public bool canMove;
+    private bool canMove;
+    private bool isDashing;
+    private bool isDashOnCooldown;
+
+    private Vector2 dashDirection;
 
     private string firstInputAxis;
 
     //Attack variables
     private float attackTime;
-    private float nextAttackTime = 0;
+    private float nextAttackTime;
 
+    private bool isAttacking;
     private bool isSpinAttacking;
+    private bool isAttackOnCooldown;
 
-    private Coroutine spinAttackCoroutine;
+    private Coroutine spinAttackHeldCoroutine;
+    private Coroutine spinAttackReleasedCoroutine;
 
     void Start()
     {
@@ -37,14 +47,14 @@ public class PlayerController : MonoBehaviour
 
         // Initialize movement variables
         canMove = true;
-        attackTime = playerStats.GetStartAttackTime();
     }
 
     // Update is called once per frame
     void Update()
     {
         HandleMovementInput();
-        AttackCooldown();
+        Dash();
+        Attack();
     }
 
     //Movement Functions --------------------------------------------------------------------------------------------
@@ -122,12 +132,69 @@ public class PlayerController : MonoBehaviour
         }
 
         // Move the player if no collision is detected
-        Vector2 moveDirection = new Vector2(moveDirectionX, moveDirectionY);
-        Vector2 newPosition = (Vector2)transform.position + moveDirection * playerStats.GetMoveSpeed() * Time.deltaTime;
+        Vector2 moveDirection = isDashing ? dashDirection : new Vector2(moveDirectionX, moveDirectionY);
+        float currentSpeed = isDashing ? playerStats.GetDashSpeed() : playerStats.GetMoveSpeed();
+        Vector2 newPosition = (Vector2)transform.position + moveDirection * currentSpeed * Time.deltaTime;
 
         if (canMove && !playerCollisions.IsColliding(newPosition))
         {
             transform.position = newPosition;
+        }
+    }
+
+    private void Dash()
+    {
+        if (Input.GetButtonDown("Dash") && !isDashing && !isAttacking && !isDashOnCooldown)
+        {
+            isDashing = true;
+            dashDurationTime = playerStats.GetDashDuration();
+
+            // Get the input from the player
+            float horizontalInput = Input.GetAxisRaw("Horizontal");
+            float verticalInput = Input.GetAxisRaw("Vertical");
+
+            float desiredMoveDirectionX = lastMoveDirectionX;
+            float desiredMoveDirectionY = lastMoveDirectionY;
+
+            // Check if the input is both horizontal and vertical
+            if (horizontalInput != 0 && verticalInput != 0)
+            {
+                // Check which input was pressed first then move & animate the latter input accordingly
+                if (firstInputAxis == "Horizontal")
+                {
+                    desiredMoveDirectionX = 0;
+                    desiredMoveDirectionY = verticalInput > 0 ? 1 : -1;
+
+                }
+                else if (firstInputAxis == "Vertical")
+                {
+                    desiredMoveDirectionX = horizontalInput > 0 ? 1 : -1;
+                    desiredMoveDirectionY = 0;
+                }
+            }
+                dashDirection = new Vector2(desiredMoveDirectionX, desiredMoveDirectionY);
+
+            // Set the cooldown
+            isDashOnCooldown = true;
+            nextDashTime = Time.time + playerStats.GetDashCooldownTime();
+        }
+
+        if (isDashing)
+        {
+            if (dashDurationTime > 0)
+            {
+                dashDurationTime -= Time.deltaTime;
+            }
+            else
+            {
+                isDashing = false;
+            }
+        }
+
+        // Check if the cooldown has expired
+        if (isDashOnCooldown && Time.time >= nextDashTime)
+        {
+            isDashOnCooldown = false;
         }
     }
 
@@ -163,49 +230,45 @@ public class PlayerController : MonoBehaviour
     {
         if (i == 0)
         {
-            canMove = true;
+            canMove = false;
         }
         else
         {
-            canMove = false;
+            canMove = true;
         }
     }
 
+
     //Attack Functions ----------------------------------------------------------------------------------------------
-    private void AttackCooldown()
-    {
-        if (Time.time > nextAttackTime)
-        {
-            if (attackTime <= 0)
-            {
-                attackTime = playerStats.GetStartAttackTime();
-            }
-            else
-            {
-                attackTime -= Time.deltaTime;
-                Attack();
-            }
-        }
-    }
 
     private void Attack()
     {
-        if (Input.GetButtonDown("Attack"))
+        if (Input.GetButtonDown("Attack") && !isAttacking && !isDashing && !isAttackOnCooldown)
         {
+            isAttacking = true;
             // Stop the existing coroutine if it's running
-            if (spinAttackCoroutine != null)
+            if (spinAttackHeldCoroutine != null)
             {
-                StopCoroutine(spinAttackCoroutine);
-                spinAttackCoroutine = null;
+                StopCoroutine(spinAttackHeldCoroutine);
+                spinAttackHeldCoroutine = null;
             }
 
             animator.SetTrigger("Attack");
+
+            //Set the cooldown
+            isAttackOnCooldown = true;
             nextAttackTime = Time.time + playerStats.GetAttackCooldownTime();
 
             playerCollisions.CheckSwordCollisions();
 
             // Start the coroutine to check for spin attack and set the reference
-            spinAttackCoroutine = StartCoroutine(CheckForSpinAttack());
+            spinAttackHeldCoroutine = StartCoroutine(CheckForSpinAttack());
+        }
+
+        // Check if the cooldown has expired
+        if (isAttackOnCooldown && Time.time >= nextAttackTime)
+        {
+            isAttackOnCooldown = false;
         }
     }
 
@@ -219,16 +282,46 @@ public class PlayerController : MonoBehaviour
             SpinAttack();
         }
 
-        spinAttackCoroutine = null;
+        spinAttackHeldCoroutine = null;
     }
 
     private void SpinAttack()
     {
-        animator.SetTrigger("SpinAttack");
+        animator.SetTrigger("SpinAttackHeld");
+
+        spinAttackReleasedCoroutine = StartCoroutine(CheckForSpinAttackReleased());
     }
 
+    private IEnumerator CheckForSpinAttackReleased()
+    {
+        print("waiting");
+        // Wait until the attack button is released
+        yield return new WaitUntil(() => Input.GetButtonUp("Attack"));
+
+        // Trigger the release animation
+        animator.SetTrigger("SpinAttackReleased");
+    }
+
+
     //Attack getters and setters
-    public bool GetIsSpinAttacking()
+    public bool GetIsAttacking()
+    {
+        return isAttacking;
+    }
+
+    private void SetIsAttackingAnimationEvent(int i)
+    {
+        if (i == 0)
+        {
+            isAttacking = false;
+        }
+        else
+        {
+            isAttacking = true;
+        }
+    }
+
+        public bool GetIsSpinAttacking()
     {
         return isSpinAttacking;
     }
@@ -251,33 +344,32 @@ public class PlayerController : MonoBehaviour
         if (playerCollisions.attackPointUp != null)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(playerCollisions.attackPointUp.position, playerStats.GetAttackRadius());
+            Gizmos.DrawWireCube(playerCollisions.attackPointUp.position, new Vector2(0.3f, 1));
         }
 
         if (playerCollisions.attackPointDown != null)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(playerCollisions.attackPointDown.position, playerStats.GetAttackRadius());
+            Gizmos.DrawWireCube(playerCollisions.attackPointDown.position, new Vector2(0.3f, 1));
         }
 
         if (playerCollisions.attackPointLeft != null)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(playerCollisions.attackPointLeft.position, playerStats.GetAttackRadius());
+            Gizmos.DrawWireCube(playerCollisions.attackPointLeft.position, new Vector2(1, 0.3f));
         }
 
         if (playerCollisions.attackPointRight != null)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(playerCollisions.attackPointRight.position, playerStats.GetAttackRadius());
+            Gizmos.DrawWireCube(playerCollisions.attackPointRight.position, new Vector2(1, 0.3f));
         }
 
         if (playerCollisions.attackPointCenter != null)
         {
             Gizmos.color = Color.blue;
-            Gizmos.DrawWireSphere(playerCollisions.attackPointCenter.position, playerStats.GetSpinAttackRadius());
+            Gizmos.DrawWireCube(playerCollisions.attackPointCenter.position, new Vector2(2, 2f));
         }
     }
     */
-
 }

@@ -92,7 +92,7 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 0
-    functionName: SetCanMoveAnimationEvent
+    functionName: SetIsAttackingAnimationEvent
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
@@ -100,6 +100,13 @@ AnimationClip:
     messageOptions: 0
   - time: 0.4375
     functionName: SetCanMoveAnimationEvent
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 1
+    messageOptions: 0
+  - time: 0.4375
+    functionName: SetIsAttackingAnimationEvent
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
