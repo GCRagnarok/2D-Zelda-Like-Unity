@@ -104,10 +104,9 @@ GameObject:
   - component: {fileID: 1585106044656680905}
   - component: {fileID: 5931000234392534376}
   - component: {fileID: 8882261054699303496}
-  - component: {fileID: 6696127533087705227}
   - component: {fileID: 401018889871890215}
+  - component: {fileID: 6696127533087705227}
   - component: {fileID: 6805862114317459260}
-  - component: {fileID: 8111918069616863343}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -232,27 +231,6 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.8, y: 0.8}
   m_EdgeRadius: 0
---- !u!95 &6696127533087705227
-Animator:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5442395108419527496}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 3e03caa3028b7064c903affe97bd0335, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!50 &401018889871890215
 Rigidbody2D:
   serializedVersion: 4
@@ -280,6 +258,27 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!95 &6696127533087705227
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5442395108419527496}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 3e03caa3028b7064c903affe97bd0335, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &6805862114317459260
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -293,36 +292,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 6696127533087705227}
-  moveSpeed: 5
-  startAttackTime: 0.1
-  attackCooldownTime: 0.4
---- !u!114 &8111918069616863343
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5442395108419527496}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 58ace5b622d73284c9b2523f08af495e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  collisionLayer:
-    serializedVersion: 2
-    m_Bits: 448
   attackableLayer:
     serializedVersion: 2
-    m_Bits: 384
+    m_Bits: 0
   attackPointUp: {fileID: 0}
   attackPointDown: {fileID: 0}
   attackPointLeft: {fileID: 0}
   attackPointRight: {fileID: 0}
   attackPointCenter: {fileID: 0}
-  attackRadius: 0.6
-  spinAttackRadius: 1.2
-  attackDamage: 10
-  spinAttackDamage: 20
 --- !u!1 &5773425553066832651
 GameObject:
   m_ObjectHideFlags: 0

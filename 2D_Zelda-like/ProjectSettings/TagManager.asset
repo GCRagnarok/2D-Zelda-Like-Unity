@@ -6,6 +6,9 @@ TagManager:
   tags:
   - Zombie1
   - Pot1
+  - HeartContainer
+  - Pot
+  - MagicMeterFill
   layers:
   - Default
   - TransparentFX
@@ -16,7 +19,7 @@ TagManager:
   - Wall
   - Breakable
   - Enemy
-  - 
+  - Player
   - 
   - 
   - 

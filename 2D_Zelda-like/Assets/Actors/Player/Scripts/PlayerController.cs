@@ -1,3 +1,4 @@
+using Pathfinding;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,8 +10,9 @@ public class PlayerController : MonoBehaviour
 {
     //Editor variables
     public Animator animator;
-    private PlayerCollisions playerCollisions;
     private PlayerStats playerStats;
+    private Rigidbody2D rb2d;
+    private PlayerAttackCollisions playerAttackCollisions;
 
     //Movement variables
     private float moveDirectionX;
@@ -19,11 +21,15 @@ public class PlayerController : MonoBehaviour
     private float lastMoveDirectionY = -1;
     private float dashDurationTime;
     private float nextDashTime;
+    private float originalMoveSpeed;
 
-    private bool canMove;
+    private bool canMove = true;
+    private bool canDash = true;
     private bool isDashing;
     private bool isDashOnCooldown;
 
+    private Vector2 moveDirection;
+    private Vector2 walkDirection;
     private Vector2 dashDirection;
 
     private string firstInputAxis;
@@ -33,20 +39,38 @@ public class PlayerController : MonoBehaviour
     private float nextAttackTime;
 
     private bool isAttacking;
+    private float activateSpinAttackTime = 0.8f;
+    private bool isChargingSpinAttack;
     private bool isSpinAttacking;
     private bool isAttackOnCooldown;
 
     private Coroutine spinAttackHeldCoroutine;
-    private Coroutine spinAttackReleasedCoroutine;
+
+    //Hurt variables
+    private bool isHurt;
+    private Coroutine ResetHurtCouroutine;
+    public bool isDead;
+    public bool canBeHurt = true;
+
+    //Animation variables
+    private float attackAnimationTime = 0.8f;
+    private float startSpinAttackAnimationTime = 0.9f;
+    private float spinAttackReleaseAnimationTime = 1.1f;
+    private float hurtAnimationTime = 0.6f;
+    private float dieAnimationTime = 2.1f;
 
     void Start()
     {
         // Initialize Components
-        playerCollisions = GetComponent<PlayerCollisions>();
+        rb2d = GetComponent<Rigidbody2D>();
         playerStats = GetComponent<PlayerStats>();
+        playerAttackCollisions = GetComponent<PlayerAttackCollisions>();
 
         // Initialize movement variables
-        canMove = true;
+        originalMoveSpeed = playerStats.GetMoveSpeed();
+
+        //initialize direction variables
+        animator.SetBool("Down", true);
     }
 
     // Update is called once per frame
@@ -60,6 +84,12 @@ public class PlayerController : MonoBehaviour
     //Movement Functions --------------------------------------------------------------------------------------------
     private void HandleMovementInput()
     {
+        if (!canMove)
+        {
+            rb2d.velocity = Vector2.zero;
+            return;
+        }
+
         // Get the input from the player
         float horizontalInput = Input.GetAxisRaw("Horizontal");
         float verticalInput = Input.GetAxisRaw("Vertical");
@@ -74,9 +104,13 @@ public class PlayerController : MonoBehaviour
             lastMoveDirectionX = moveDirectionX;
             lastMoveDirectionY = moveDirectionY;
 
+            animator.SetBool("Idle", false);
+            animator.SetBool("Walking", true);
             animator.SetBool("Horizontal", true);
             animator.SetBool("Vertical", false);
             animator.SetFloat("Direction", horizontalInput);
+
+            GetDirection();
         }
         // Check if the input is exclusivley vertical then move & animate accordingly
         else if (verticalInput != 0 && horizontalInput == 0)
@@ -88,9 +122,13 @@ public class PlayerController : MonoBehaviour
             lastMoveDirectionX = moveDirectionX;
             lastMoveDirectionY = moveDirectionY;
 
-            animator.SetBool("Vertical", true);
+            animator.SetBool("Idle", false);
+            animator.SetBool("Walking", true);
             animator.SetBool("Horizontal", false);
+            animator.SetBool("Vertical", true);
             animator.SetFloat("Direction", verticalInput);
+
+            GetDirection();
         }
         // Check if the input is both horizontal and vertical
         else if (horizontalInput != 0 && verticalInput != 0)
@@ -101,10 +139,13 @@ public class PlayerController : MonoBehaviour
                 moveDirectionX = 0;
                 moveDirectionY = verticalInput > 0 ? 1 : -1;
 
+                lastMoveDirectionX = moveDirectionX;
                 lastMoveDirectionY = moveDirectionY;
 
-                animator.SetBool("Vertical", true);
+                animator.SetBool("Idle", false);
+                animator.SetBool("Walking", true);
                 animator.SetBool("Horizontal", false);
+                animator.SetBool("Vertical", true);
                 animator.SetFloat("Direction", verticalInput);
             }
             else if (firstInputAxis == "Vertical")
@@ -113,38 +154,42 @@ public class PlayerController : MonoBehaviour
                 moveDirectionY = 0;
 
                 lastMoveDirectionX = moveDirectionX;
+                lastMoveDirectionY = moveDirectionY;
 
+                animator.SetBool("Idle", false);
+                animator.SetBool("Walking", true);
                 animator.SetBool("Horizontal", true);
                 animator.SetBool("Vertical", false);
                 animator.SetFloat("Direction", horizontalInput);
             }
+
+            GetDirection();
         }
         // Check if no input is detected then stop moving & animate accordingly
-        else if (horizontalInput == 0 && verticalInput == 0)
+        else if (horizontalInput == 0 && verticalInput == 0 || canMove == false)
         {
             moveDirectionX = 0;
             moveDirectionY = 0;
             firstInputAxis = "";
 
+            animator.SetBool("Idle", true);
+            animator.SetBool("Walking", false);
             animator.SetBool("Horizontal", false);
             animator.SetBool("Vertical", false);
             animator.SetFloat("Direction", 0);
         }
 
-        // Move the player if no collision is detected
-        Vector2 moveDirection = isDashing ? dashDirection : new Vector2(moveDirectionX, moveDirectionY);
+        walkDirection = new Vector2(moveDirectionX, moveDirectionY).normalized;
+        moveDirection = isDashing ? dashDirection : walkDirection;
         float currentSpeed = isDashing ? playerStats.GetDashSpeed() : playerStats.GetMoveSpeed();
-        Vector2 newPosition = (Vector2)transform.position + moveDirection * currentSpeed * Time.deltaTime;
 
-        if (canMove && !playerCollisions.IsColliding(newPosition))
-        {
-            transform.position = newPosition;
-        }
+        rb2d.velocity = moveDirection * currentSpeed;
     }
+
 
     private void Dash()
     {
-        if (Input.GetButtonDown("Dash") && !isDashing && !isAttacking && !isDashOnCooldown)
+        if (Input.GetButtonDown("Dash") && canMove && canDash && !isDashing && !isAttacking && !isDashOnCooldown)
         {
             isDashing = true;
             dashDurationTime = playerStats.GetDashDuration();
@@ -172,11 +217,14 @@ public class PlayerController : MonoBehaviour
                     desiredMoveDirectionY = 0;
                 }
             }
-                dashDirection = new Vector2(desiredMoveDirectionX, desiredMoveDirectionY);
+
+            animator.SetBool("Dashing", true);
+            canBeHurt = false;
+            dashDirection = new Vector2(desiredMoveDirectionX, desiredMoveDirectionY).normalized;
 
             // Set the cooldown
             isDashOnCooldown = true;
-            nextDashTime = Time.time + playerStats.GetDashCooldownTime();
+            nextDashTime = Time.time + (playerStats.GetDashDuration() + playerStats.GetDashCooldownTime());
         }
 
         if (isDashing)
@@ -188,6 +236,8 @@ public class PlayerController : MonoBehaviour
             else
             {
                 isDashing = false;
+                canBeHurt = true;
+                animator.SetBool("Dashing", false);
             }
         }
 
@@ -207,15 +257,31 @@ public class PlayerController : MonoBehaviour
         {
             case (1, 0):
                 direction = "Right";
+                animator.SetBool("Right", true);
+                animator.SetBool("Left", false);
+                animator.SetBool("Up", false);
+                animator.SetBool("Down", false);
                 break;
             case (0, 1):
                 direction = "Up";
+                animator.SetBool("Up", true);
+                animator.SetBool("Down", false);
+                animator.SetBool("Right", false);
+                animator.SetBool("Left", false);
                 break;
             case (0, -1):
                 direction = "Down";
+                animator.SetBool("Down", true);
+                animator.SetBool("Up", false);
+                animator.SetBool("Right", false);
+                animator.SetBool("Left", false);
                 break;
             case (-1, 0):
                 direction = "Left";
+                animator.SetBool("Left", true);
+                animator.SetBool("Right", false);
+                animator.SetBool("Up", false);
+                animator.SetBool("Down", false);
                 break;
         }
         return direction;
@@ -226,43 +292,34 @@ public class PlayerController : MonoBehaviour
         return canMove;
     }
 
-    private void SetCanMoveAnimationEvent(int i)
-    {
-        if (i == 0)
-        {
-            canMove = false;
-        }
-        else
-        {
-            canMove = true;
-        }
-    }
-
-
     //Attack Functions ----------------------------------------------------------------------------------------------
-
     private void Attack()
     {
-        if (Input.GetButtonDown("Attack") && !isAttacking && !isDashing && !isAttackOnCooldown)
+        if (Input.GetButtonDown("Attack") && !isAttacking && !isDashing && !isAttackOnCooldown && !isHurt)
         {
-            isAttacking = true;
-            // Stop the existing coroutine if it's running
+            // Stop spinAttackHeldCoroutine if it's running
             if (spinAttackHeldCoroutine != null)
             {
                 StopCoroutine(spinAttackHeldCoroutine);
                 spinAttackHeldCoroutine = null;
             }
 
+            isAttacking = true;
+            canMove = false;
+
             animator.SetTrigger("Attack");
 
-            //Set the cooldown
             isAttackOnCooldown = true;
             nextAttackTime = Time.time + playerStats.GetAttackCooldownTime();
 
-            playerCollisions.CheckSwordCollisions();
+            StartCoroutine(ResetAttackBooleans());
 
-            // Start the coroutine to check for spin attack and set the reference
-            spinAttackHeldCoroutine = StartCoroutine(CheckForSpinAttack());
+            playerAttackCollisions.CheckSwordCollisions();
+
+            if (playerStats.GetCurrentMagic() >= playerStats.GetSpinAttackCost())
+            {
+                spinAttackHeldCoroutine = StartCoroutine(CheckForSpinAttack());
+            }
         }
 
         // Check if the cooldown has expired
@@ -272,36 +329,108 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private IEnumerator ResetAttackBooleans()
+    {
+        yield return new WaitForSeconds(attackAnimationTime - 0.2f);
+
+        isAttacking = false;
+        canMove = true;
+    }
+
     private IEnumerator CheckForSpinAttack()
     {
-        yield return new WaitForSeconds(0.8f);
+        yield return new WaitForSeconds(activateSpinAttackTime);
 
         // Check if the attack button is still being held
-        if (Input.GetButton("Attack"))
+        if (Input.GetButton("Attack") && !isHurt)
         {
             SpinAttack();
         }
 
-        spinAttackHeldCoroutine = null;
+        spinAttackHeldCoroutine = null;;
     }
 
     private void SpinAttack()
     {
-        animator.SetTrigger("SpinAttackHeld");
+        isSpinAttacking = true;
+        canMove = false;
+        playerStats.SetMoveSpeed(playerStats.GetSpinAttackMoveSpeed());
 
-        spinAttackReleasedCoroutine = StartCoroutine(CheckForSpinAttackReleased());
+        animator.SetTrigger("SpinAttackHeld");
+        animator.SetBool("HoldingSpinAttack", true);
+
+        playerStats.SetCurrentTempMagic(playerStats.GetCurrentTempMagic() - playerStats.GetSpinAttackCost());
+
+        StartCoroutine(CheckForSpinAttackReleased());
+        StartCoroutine(SetFinishedChargingSpinAttackBooleans());
+    }
+
+    private IEnumerator SetFinishedChargingSpinAttackBooleans()
+    {
+        isChargingSpinAttack = true;
+
+        // Wait for start spin attack animation time and enable movement
+        yield return new WaitForSeconds(startSpinAttackAnimationTime - 0.4f);
+
+        // Check if the spin attack was successfully charged
+        if (isSpinAttacking)
+        {
+            canMove = true;
+            canDash = false;
+            isChargingSpinAttack = false;
+        }
     }
 
     private IEnumerator CheckForSpinAttackReleased()
     {
-        print("waiting");
-        // Wait until the attack button is released
-        yield return new WaitUntil(() => Input.GetButtonUp("Attack"));
+        // While the spin attack is charged, check for exit conditions
+        while (true)
+        {
+            // If the player is hurt or attack button is released while charging, cancel the spin attack and reset variables
+            if (isHurt || Input.GetButtonUp("Attack") && isChargingSpinAttack)
+            {
+                playerStats.SetCurrentTempMagic(playerStats.GetCurrentMagic());
 
-        // Trigger the release animation
-        animator.SetTrigger("SpinAttackReleased");
+                animator.SetBool("HoldingSpinAttack", false);
+                isSpinAttacking = false;
+                canMove = true;
+                canDash = true;
+                playerStats.SetMoveSpeed(originalMoveSpeed);
+
+                yield break; // Exit the coroutine
+            }
+
+            // If the attack button is released and charging has finished, release the spin attack
+            if (Input.GetButtonUp("Attack") && !isChargingSpinAttack)
+            {
+                canMove = false;
+
+                animator.SetTrigger("SpinAttackReleased");
+
+                playerAttackCollisions.CheckSwordCollisions();
+
+                playerStats.SetCurrentMagic(playerStats.GetCurrentMagic() - playerStats.GetSpinAttackCost());
+
+                StartCoroutine(ResetSpinAttackVariables());
+
+                yield break; // Exit the coroutine
+            }
+         
+            // Wait until the next frame before checking again
+            yield return null;
+        }
     }
 
+    private IEnumerator ResetSpinAttackVariables()
+    {
+        yield return new WaitForSeconds(spinAttackReleaseAnimationTime - 0.5f);
+
+        animator.SetBool("HoldingSpinAttack", false);
+        isSpinAttacking = false;
+        canMove = true;
+        canDash = true;
+        playerStats.SetMoveSpeed(originalMoveSpeed);
+    }
 
     //Attack getters and setters
     public bool GetIsAttacking()
@@ -309,67 +438,48 @@ public class PlayerController : MonoBehaviour
         return isAttacking;
     }
 
-    private void SetIsAttackingAnimationEvent(int i)
-    {
-        if (i == 0)
-        {
-            isAttacking = false;
-        }
-        else
-        {
-            isAttacking = true;
-        }
-    }
-
-        public bool GetIsSpinAttacking()
+    public bool GetIsSpinAttacking()
     {
         return isSpinAttacking;
     }
 
-    private void SetIsSpinAttackingAnimationEvent(int i)
+    //Hurt Functions ------------------------------------------------------------------------------------------------
+
+    public void Hurt()
     {
-        if (i == 0)
+        canMove = false;
+        isHurt = true;
+        animator.SetTrigger("Hurt");
+
+        StartCoroutine(ResetHurtBooleans());
+    }
+
+    public IEnumerator ResetHurtBooleans()
+    {
+        yield return new WaitForSeconds(hurtAnimationTime);
+
+        if (!isDead)
         {
-            isSpinAttacking = false;
-        }
-        else
-        {
-            isSpinAttacking = true;
+            canMove = true;
+            isHurt = false;
         }
     }
-    /*
-    // Gizmos Functions ---------------------------------------------------------------------------------------------
-    private void OnDrawGizmosSelected()
+
+    public void Die()
     {
-        if (playerCollisions.attackPointUp != null)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireCube(playerCollisions.attackPointUp.position, new Vector2(0.3f, 1));
-        }
+        isDead = true;
+        canMove = false;
+        isDashing = true;
+        isAttacking = true;
 
-        if (playerCollisions.attackPointDown != null)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireCube(playerCollisions.attackPointDown.position, new Vector2(0.3f, 1));
-        }
+        animator.SetTrigger("Die");
 
-        if (playerCollisions.attackPointLeft != null)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireCube(playerCollisions.attackPointLeft.position, new Vector2(1, 0.3f));
-        }
-
-        if (playerCollisions.attackPointRight != null)
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireCube(playerCollisions.attackPointRight.position, new Vector2(1, 0.3f));
-        }
-
-        if (playerCollisions.attackPointCenter != null)
-        {
-            Gizmos.color = Color.blue;
-            Gizmos.DrawWireCube(playerCollisions.attackPointCenter.position, new Vector2(2, 2f));
-        }
+        StartCoroutine(ReloadScene());
     }
-    */
+
+    private IEnumerator ReloadScene()
+    {
+        yield return new WaitForSeconds(dieAnimationTime + 1f);
+        UnityEngine.SceneManagement.SceneManager.LoadScene("SampleScene");
+    }
 }
