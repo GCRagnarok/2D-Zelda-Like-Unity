@@ -6,6 +6,8 @@ public class SpawnItems : MonoBehaviour
 {
     public GameObject heart;
     public GameObject magicjar;
+    public int maxHealthPickups = 3;
+    public int maxMagicPickups = 3;
 
     // Start is called before the first frame update
     void Start()
@@ -21,11 +23,23 @@ public class SpawnItems : MonoBehaviour
 
     public void SpawnHeart()
     {
-        Instantiate(heart, transform.position, Quaternion.identity);
+        RestoreHealth[] healthPickups = FindObjectsByType<RestoreHealth>(FindObjectsSortMode.None);
+        int healthPickupCount = healthPickups.Length;
+
+        if (healthPickupCount < maxHealthPickups)
+        {
+            Instantiate(heart, transform.position, Quaternion.identity);
+        }
     }
 
     public void SpawnMagicJar()
     {
-        Instantiate(magicjar, transform.position, Quaternion.identity);
+        RestoreMagic[] magicPickups = FindObjectsByType<RestoreMagic>(FindObjectsSortMode.None);
+        int magicPickupCount = magicPickups.Length;
+
+        if (magicPickupCount < maxMagicPickups)
+        {
+            Instantiate(magicjar, transform.position, Quaternion.identity);
+        }
     }
 }

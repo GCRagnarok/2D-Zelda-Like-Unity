@@ -21,10 +21,12 @@ public class EnemyStats : MonoBehaviour
     public float searchRadius = 5f;
     public float endDistanceOffset = 0.2f;
 
-    //Attack variables
+    //Engage variables
     public float attackDamage = 10f;
-    public float attackCooldownMinTime = 0.5f;
-    public float attackCooldownMaxTime = 3f;
+    public float engageCooldownMinTime = 0.5f;
+    public float engageCooldownMaxTime = 3f;
+    public float attackChance = 0.7f;
+    public float evadeDistance = 1f;
 
     //End of variables ----------------------------------------------------------------------------------------------
 
@@ -49,11 +51,13 @@ public class EnemyStats : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        currentHealth -= damage;
-
         if (CompareTag("Zombie1"))
         {
-            z1Controller.Hurt();
+            if (z1Controller.canBeHurt)
+            {
+                SetCurrentHealth(currentHealth - damage);
+                z1Controller.Hurt();
+            }
         }
 
         if (currentHealth <= 0)
@@ -90,6 +94,15 @@ public class EnemyStats : MonoBehaviour
 
     public void SetCurrentHealth(float newCurrentHealth)
     {
+        if (newCurrentHealth >= maxHealth)
+        {
+            newCurrentHealth = maxHealth;
+        }
+        else if (newCurrentHealth < 0)
+        {
+            newCurrentHealth = 0;
+        }
+
         currentHealth = newCurrentHealth;
     }
 
@@ -108,22 +121,22 @@ public class EnemyStats : MonoBehaviour
 
     public float GetAttackCooldownMinTime()
     {
-        return attackCooldownMinTime;
+        return engageCooldownMinTime;
     }
 
     public void SetAttackCooldownMinTime(float newAttackCooldownMinTime)
     {
-        attackCooldownMinTime = newAttackCooldownMinTime;
+        engageCooldownMinTime = newAttackCooldownMinTime;
     }
 
     public float GetAttackCooldownMaxTime()
     {
-        return attackCooldownMaxTime;
+        return engageCooldownMaxTime;
     }
 
     public void SetAttackCooldownMaxTime(float newAttackCooldownMaxTime)
     {
-        attackCooldownMaxTime = newAttackCooldownMaxTime;
+        engageCooldownMaxTime = newAttackCooldownMaxTime;
     }
 
     //Zombie1 Ai Movement getters and setters

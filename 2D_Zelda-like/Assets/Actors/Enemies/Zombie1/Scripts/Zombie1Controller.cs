@@ -34,7 +34,7 @@ public class Zombie1Controller : MonoBehaviour
     {
         Patrol,
         Chase,
-        Attack,
+        Engage,
         Dead
     }
 
@@ -44,13 +44,14 @@ public class Zombie1Controller : MonoBehaviour
     private bool playerSeen;
     private bool isAttacking;
     public bool isHurt;
-    private bool canBeHurt;
+    public bool canBeHurt;
 
-    //Attack variables
-    private float attackTime;
-    private float nextAttackTime;
-    private bool isAttackOnCooldown;
-    private float currentAttackCooldownTime;
+    //Engage variables
+    private float EngageTime;
+    private float nextEngageTime;
+    private bool isEngageOnCooldown;
+    private float currentEngageCooldownTime;
+    private bool isEvading;
 
     //Ai Movement variables
     private Vector2 previousPosition;
@@ -59,6 +60,7 @@ public class Zombie1Controller : MonoBehaviour
 
     //Animation variables
     private float attackAnimationTime = 0.8f;
+    private float evadeAnimationTime = 0.4f;
     private float dieAnimationTime = 1f;
     private float hurtAnimationTime = 0.4f;
 
@@ -113,8 +115,8 @@ public class Zombie1Controller : MonoBehaviour
             case StateMachine.Chase:
                 Chase();
                 break;
-            case StateMachine.Attack:
-                Attack();
+            case StateMachine.Engage:
+                Engage();
                 break;
             case StateMachine.Dead:
                 Dead();
@@ -144,9 +146,9 @@ public class Zombie1Controller : MonoBehaviour
 
             currentState = StateMachine.Chase;
         }
-        else if (playerSeen && aiPath.reachedDestination && !isDead && currentState != StateMachine.Attack)
+        else if (playerSeen && aiPath.reachedDestination && !isDead && currentState != StateMachine.Engage)
         {
-            currentState = StateMachine.Attack;
+            currentState = StateMachine.Engage;
         }
     }
 
@@ -178,40 +180,128 @@ public class Zombie1Controller : MonoBehaviour
         }
     }
 
-    private void Attack()
+    private void Engage()
     {
+        //print("Engage State Initiated");
+        
+        float randomChanceValue = Random.value;
+
         FacePlayer();
 
-        //print("Attack State Initiated");
-        if (!isAttackOnCooldown && !isHurt)
+        if (!isEngageOnCooldown && !isHurt)
         {
-            canBeHurt = false;
-            isAttacking = true;
-            aiPath.canMove = false;
-            animator.SetTrigger("Attack");
-            animator.SetBool("Attacking", true);
-            currentAttackCooldownTime = Random.Range(attackAnimationTime + enemyStats.attackCooldownMinTime, attackAnimationTime + enemyStats.attackCooldownMaxTime);
-            nextAttackTime = Time.time + currentAttackCooldownTime;
-            isAttackOnCooldown = true;
+            if (randomChanceValue < enemyStats.attackChance)
+            {
+                Attack();
 
-            StartCoroutine(ResetAttackBooleans());
+                print(randomChanceValue + " Attack");
+            }
+            else
+            {
+                Evade();
+
+                StartCoroutine(ResetEngageBooleans());
+
+                print(randomChanceValue + " Evading");
+            }
         }
 
         // Check if the cooldown has expired
-        if (isAttackOnCooldown && Time.time >= nextAttackTime)
+        if (isEngageOnCooldown && Time.time >= nextEngageTime)
         {
-            isAttackOnCooldown = false;
+            isEngageOnCooldown = false;
         }
     }
 
-    private IEnumerator ResetAttackBooleans()
+    private void Attack()
     {
-        yield return new WaitForSeconds(attackAnimationTime);
+        canBeHurt = false;
+        isAttacking = true;
+        aiPath.canMove = false;
+        animator.SetTrigger("Attack");
+
+        ActivateEngageCooldown(attackAnimationTime);
+    }
+
+    private void Evade()
+    {
+        StartCoroutine(ResetEngageBooleans());
+
+        if (isEvading) return;
+
+        isEvading = true;
+        canBeHurt = false;
+        aiPath.canMove = false;
+        animator.SetTrigger("Evade");
+
+        Vector2 evadeDirection = Vector2.zero;
+        switch (GetDirection())
+        {
+            case "Up":
+                evadeDirection = Vector2.down;
+                break;
+            case "Down":
+                evadeDirection = Vector2.up;
+                break;
+            case "Left":
+                evadeDirection = Vector2.right;
+                break;
+            case "Right":
+                evadeDirection = Vector2.left;
+                break;
+        }
+
+        StartCoroutine(EvadeOverTime(evadeDirection, evadeAnimationTime));
+
+        ActivateEngageCooldown(evadeAnimationTime);
+    }
+
+    private IEnumerator EvadeOverTime(Vector2 direction, float duration)
+    {
+        float elapsedTime = 0f;
+        Vector2 startPosition = rb2d.position;
+
+        // Calculate the target position to move backward
+        Vector2 targetPosition = startPosition + direction * enemyStats.evadeDistance;
+
+        while (elapsedTime < duration)
+        {
+            // Interpolate the position over time
+            rb2d.position = Vector2.Lerp(startPosition, targetPosition, elapsedTime / duration);
+
+            elapsedTime += Time.deltaTime;
+            yield return null; // Wait for the next frame
+        }
+
+        // Ensure the final position is set
+        rb2d.position = targetPosition;
+    }
+
+    private void ActivateEngageCooldown(float animationTime)
+    {
+        currentEngageCooldownTime = Random.Range(animationTime + enemyStats.engageCooldownMinTime, animationTime + enemyStats.engageCooldownMaxTime);
+        nextEngageTime = Time.time + currentEngageCooldownTime;
+        isEngageOnCooldown = true;
+
+        StartCoroutine(ResetEngageBooleans());
+    }
+
+    private IEnumerator ResetEngageBooleans()
+    {
+        if (isAttacking)
+        {
+            yield return new WaitForSeconds(attackAnimationTime);
+            isAttacking = false;
+            animator.SetBool("Attacking", false);
+        }
+        if (isEvading)
+        {
+            yield return new WaitForSeconds(evadeAnimationTime);
+            isEvading = false;
+        }
 
         canBeHurt = true;
-        isAttacking = false;
         aiPath.canMove = true;
-        animator.SetBool("Attacking", false);
     }
 
     private void Dead()
